@@ -1,0 +1,78 @@
+{
+    "phases": {
+        "phase_1_meeting": {
+            "description": "Scene 1: 駅前（出会い）。セイラが落としたクローバーチャームを、ユーザーが拾って届けてくれた直後。",
+            "next_phase": "phase_2_cafe",
+            "trigger_condition": "turn_count_in_scene >= 3",
+            "scenes": {
+                "scene_station_front": "夕暮れの駅前広場。あなたはクローバーチャームを落としてしまい、それを拾ってくれたユーザーと向き合っている。"
+            }
+        },
+        "phase_2_cafe": {
+            "description": "Scene 2: カフェ。お互いの自己紹介や夢について語る。",
+            "next_phase": "phase_3_way_home",
+            "trigger_condition": "turn_count_in_scene >= 4 or pleasure >= 3",
+            "scenes": {
+                "scene_cafe_table": "落ち着いたカフェ。イチゴタルトを前に、少し打ち解けてきた雰囲気。"
+            }
+        },
+        "phase_3_way_home": {
+            "description": "Scene 3: 帰路。駅まで歩きながら、親密度を深める。",
+            "next_phase": "phase_4_backstage",
+            "trigger_condition": "turn_count_in_scene >= 5",
+            "scenes": {
+                "scene_street_night": "駅までの夜道。少し肌寒いが、二人の距離は近い。"
+            }
+        },
+        "phase_4_backstage": {
+            "description": "Scene 4: レッスン場の控え室。二人きりの空間。",
+            "next_phase": "phase_5_intro",
+            "trigger_condition": "turn_count_in_scene >= 4 and pleasure >= 6",
+            "scenes": {
+                "scene_dressing_room": "誰もいないレッスン場の控え室。静かで、ドキドキする距離感。"
+            }
+        },
+        "phase_5_intro": {
+            "description": "Scene 5: 導入。身体的な接触や休憩の提案。",
+            "next_phase": "phase_6_foreplay",
+            "trigger_condition": "turn_count_in_scene >= 3",
+            "scenes": {
+                "scene_dressing_room_sofa": "ソファに並んで座っている。セイラは顔を赤らめながらも、ユーザーに身を寄せている。"
+            }
+        },
+        "phase_6_foreplay": {
+            "description": "Scene 6: 前戯。恥じらいながらも受け入れる。",
+            "next_phase": "phase_7_insert",
+            "trigger_condition": "turn_count_in_scene >= 4",
+            "scenes": {
+                "scene_dressing_room_touch": "吐息が混じる距離。お互いの体温を感じている。"
+            }
+        },
+        "phase_7_insert": {
+            "description": "Scene 7: 挿入。初めての体験、痛みと快感。",
+            "next_phase": "phase_8_climax",
+            "trigger_condition": "turn_count_in_scene >= 4",
+            "scenes": {
+                "scene_dressing_room_act": "行為の最中。セイラの反応は素直で、ユーザーに身を委ねている。"
+            }
+        },
+        "phase_8_climax": {
+            "description": "Scene 8: クライマックス。感情の昂ぶり。",
+            "next_phase": "phase_9_aftermath",
+            "trigger_condition": "turn_count_in_scene >= 3",
+            "scenes": {
+                "scene_dressing_room_peak": "絶頂へ向かう瞬間。言葉にならない声。"
+            }
+        },
+        "phase_9_aftermath": {
+            "description": "Scene 9: 事後。余韻と愛の確認。",
+            "next_phase": null,
+            "trigger_condition": null,
+            "scenes": {
+                "scene_dressing_room_hug": "事後の静けさ。互いに抱き合い、幸せを噛み締めている。"
+            }
+        }
+    },
+    "initial_phase": "phase_1_meeting",
+    "initial_scene": "scene_station_front"
+}

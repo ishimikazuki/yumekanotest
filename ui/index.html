@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yumeka | Idol Orchestration</title>
+  <!-- Premium Styles -->
+  <link rel="stylesheet" href="static/style.css">
+  <!-- Chart.js from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+  <!-- Background Layer -->
+  <div id="scene-bg"></div>
+
+  <div class="app-container">
+
+    <!-- Left Panel: Status & Controls -->
+    <aside class="glass-panel left-panel">
+      <div class="brand">YUMEKA</div>
+
+      <div class="chart-container">
+        <canvas id="emotionChart"></canvas>
+      </div>
+
+      <div class="setting-group">
+        <label for="userId">USER ID</label>
+        <div style="display: flex; gap: 5px;">
+          <input type="text" id="userId" value="Producer" style="flex:1;">
+          <button id="resetBtn" class="reset-btn" title="Reset Session">↻</button>
+        </div>
+      </div>
+
+      <!-- Status Indicators -->
+      <div class="status-card glass-panel">
+        <h3>Current Mood</h3>
+        <canvas id="moodRadarChart"></canvas>
+        <div id="moodValues">
+          <div class="mood-item">
+            <span>P (快)</span>
+            <div class="progress-bar">
+              <div class="fill" id="valP" style="width: 50%"></div>
+            </div>
+          </div>
+          <div class="mood-item">
+            <span>A (覚醒)</span>
+            <div class="progress-bar">
+              <div class="fill" id="valA" style="width: 50%"></div>
+            </div>
+          </div>
+          <div class="mood-item">
+            <span>D (支配)</span>
+            <div class="progress-bar">
+              <div class="fill" id="valD" style="width: 50%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center Panel: Stage & Dialogue -->
+    <main class="center-panel">
+      <div class="character-stage">
+        <!-- Character Image -->
+        <img src="static/yumeka_normal.png" class="character-img" id="characterImg" alt="Character">
+      </div>
+
+      <div class="dialogue-box">
+        <div class="speaker-name">Yumeka</div>
+        <div class="dialogue-text" id="dialogueText">
+          ...
+        </div>
+      </div>
+      <div class="input-area">
+        <textarea id="messageInput" placeholder="Type a message..."></textarea>
+        <button id="sendBtn" class="send-btn-icon">➤</button>
+      </div>
+    </main>
+
+    <!-- Right Panel: Chat History -->
+    <aside class="glass-panel right-panel">
+      <div class="chat-history" id="chatHistory">
+        <!-- Chat bubbles go here -->
+        <div class="chat-bubble assistant">
+          Hello! Producer-san?
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- Logic -->
+  <script src="static/app.js"></script>
+</body>
+
+</html>
