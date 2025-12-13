@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 
 def utc_now() -> str:
@@ -28,6 +28,14 @@ class EmotionState:
         self.pleasure *= (1.0 - rate * 0.1)
         self.arousal *= (1.0 - rate * 0.1)
         # Dominanceは性格依存が強いので減衰させない、あるいは緩やかにする
+
+    def to_dict(self) -> Dict[str, float]:
+        """辞書形式に変換"""
+        return {
+            "pleasure": self.pleasure,
+            "arousal": self.arousal,
+            "dominance": self.dominance
+        }
 
 
 @dataclass

@@ -27,8 +27,48 @@ if FastAPI:
         user_id: str
         message: str
 
+    class DryRunRequest(BaseModel):
+        enabled: bool
+
     app = FastAPI(title="Observer-Actor Orchestration Bot")
     app.mount("/static", StaticFiles(directory="ui"), name="static")
+
+    # ログ取得エンドポイント
+    @app.get("/logs")
+    def get_logs(limit: int = 50):
+        """エージェントログを取得"""
+        from orchestration.agent_logger import agent_logger
+        return {"logs": agent_logger.get_recent_logs(limit)}
+
+    @app.get("/logs/{agent_name}")
+    def get_agent_logs(agent_name: str, limit: int = 20):
+        """特定エージェントのログを取得"""
+        from orchestration.agent_logger import agent_logger
+        return {"logs": agent_logger.get_logs_by_agent(agent_name, limit)}
+
+    @app.delete("/logs")
+    def clear_logs():
+        """ログをクリア"""
+        from orchestration.agent_logger import agent_logger
+        agent_logger.clear_logs()
+        return {"status": "ok", "message": "Logs cleared"}
+
+    # DRY RUNモード制御
+    @app.get("/dryrun")
+    def get_dryrun_status():
+        """DRY RUNモードの状態を取得"""
+        from orchestration.settings import settings
+        return {"dry_run": settings.dry_run}
+
+    @app.post("/dryrun")
+    def set_dryrun(req: DryRunRequest):
+        """DRY RUNモードを設定"""
+        from orchestration.settings import settings, enable_dry_run, disable_dry_run
+        if req.enabled:
+            enable_dry_run()
+        else:
+            disable_dry_run()
+        return {"dry_run": settings.dry_run}
 
     @app.post("/chat")
     def chat(req: ChatRequest):
@@ -52,10 +92,12 @@ if FastAPI:
 
     @app.get("/state/{user_id}")
     def get_state(user_id: str):
-        from orchestration.storage import fetch_state, fetch_history
+        from orchestration.storage import fetch_state
+        from orchestration.session import session_manager
 
         state = fetch_state(user_id)
-        history = fetch_history(user_id, limit=20)
+        session = session_manager.get_session(user_id)
+        history = session.get_history(limit=20)
         return {
             "state": state.to_dict() if state else None,
             "history": history,

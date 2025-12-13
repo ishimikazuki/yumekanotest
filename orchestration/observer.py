@@ -13,6 +13,7 @@ from .models import EmotionState, ObservationResult, UserState, utc_now
 from .llm_client import llm_client
 from .settings import settings
 from .prompt_loader import load_prompt
+from .agent_logger import agent_logger
 
 # シナリオデータのロード
 SCENARIO_PATH = Path(__file__).resolve().parent / "data" / "idol_story.json"
@@ -93,17 +94,50 @@ def _apply_keywords(text: str, emo: EmotionState) -> None:
 def update_state(user_message: str, state: UserState, history: List[dict]) -> ObservationResult:
     """ステートを更新し、必要に応じて指示を返す。"""
     provider = settings.llm.observer_provider
-    if not llm_client.has(provider):
-         raise RuntimeError(f"Observer LLM provider '{provider}' not available")
+    model = settings.llm.observer_model
 
+    # ログ開始
+    agent_logger.start_agent(
+        agent_name="observer",
+        input_data={"user_message": user_message, "state": state.to_dict()},
+        model=model,
+        provider=provider
+    )
+
+    # Try LLM update if available
     result = None
-    try:
-        result = _update_state_llm(user_message, state, history, provider)
-    except Exception as e:
-        raise RuntimeError(f"Observer LLM Failed: {e}")
+    if llm_client.has(provider):
+        try:
+            result = _update_state_llm(user_message, state, history, provider)
+            agent_logger.end_agent(
+                agent_name="observer",
+                output_data={
+                    "emotion": result.updated_state.emotion.to_dict() if result else None,
+                    "instruction": result.instruction_override if result else None
+                },
+                details={"source": "llm"}
+            )
+        except Exception as e:
+            agent_logger.error_agent(agent_name="observer", error=e)
+            print(f"Observer LLM Failed: {e}. Falling back to rules.")
+            result = None
+    else:
+        print(f"Observer provider '{provider}' not available. Using rules.")
 
     if result is None:
-        raise RuntimeError("Observer LLM returned no data")
+        # Fallback: Rule-based update
+        new_state = UserState.from_dict(state.to_dict())
+        _apply_keywords(user_message, new_state.emotion)
+        new_state.emotion.clamp()
+        new_state.emotion.decay(0.1)
+        new_state.scenario.turn_count_in_phase += 1
+        new_state.updated_at = utc_now()
+        result = ObservationResult(updated_state=new_state)
+        agent_logger.end_agent(
+            agent_name="observer",
+            output_data={"emotion": new_state.emotion.to_dict()},
+            details={"source": "rules_fallback"}
+        )
     
     # シナリオ遷移チェック (LLM更新後に判定)
     triggered = _check_scenario_trigger(result.updated_state)
@@ -162,6 +196,7 @@ def _update_state_llm(user_message: str, state: UserState, history: List[dict], 
         messages=messages,
         schema=schema,
         provider=provider,
+        agent_type="observer",
     )
 
     new_state = UserState.from_dict(state.to_dict())

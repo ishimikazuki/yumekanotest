@@ -7,10 +7,11 @@ from __future__ import annotations
 import random
 from typing import List, Optional
 
-from .models import UserState
+from .models import UserState, EmotionState
 from .llm_client import llm_client
 from .settings import settings
 from .prompt_loader import load_prompt
+from .agent_logger import agent_logger
 
 DEFAULT_ACTOR_SYSTEM_PROMPT = (
     "あなたはActor役のキャラクターです。以下の現在状態に沿って日本語で自然に返答してください。\n"
@@ -50,17 +51,50 @@ def generate_reply(
     instruction_override: Optional[str] = None,
 ) -> str:
     provider = settings.llm.actor_provider
+    model = settings.llm.actor_model
+
+    # ログ開始
+    agent_logger.start_agent(
+        agent_name="actor",
+        input_data={
+            "user_message": user_message,
+            "memories_count": len(relevant_memories),
+            "instruction": instruction_override
+        },
+        model=model,
+        provider=provider
+    )
+
     if not llm_client.has(provider):
-        raise RuntimeError(f"Actor LLM provider '{provider}' not available")
-    
+        error = RuntimeError(
+            f"Actor LLM provider '{provider}' is not available. APIキーや設定を確認してください。"
+        )
+        agent_logger.error_agent(agent_name="actor", error=error)
+        raise error
+
     try:
-        reply = _generate_reply_llm(user_message, history, state, relevant_memories, instruction_override, provider)
+        reply = _generate_reply_llm(
+            user_message,
+            history,
+            state,
+            relevant_memories,
+            instruction_override,
+            provider,
+        )
+        agent_logger.end_agent(
+            agent_name="actor",
+            output_data=reply,
+            details={"source": "llm"}
+        )
     except Exception as e:
-        raise RuntimeError(f"Actor LLM Failed: {e}")
+        agent_logger.error_agent(agent_name="actor", error=e, details={"fallback": True})
+        # LLM 側で例外が出た場合は素朴なリフレクションでフォールバック
+        reply = _reflect(user_message, int(state.emotion.pleasure))
 
     if not reply:
-        raise RuntimeError("Actor LLM returned empty content")
-        
+        # 空返却もフォールバックさせる
+        reply = _reflect(user_message, int(state.emotion.pleasure))
+
     return reply.strip()
 
 
@@ -92,14 +126,12 @@ def _generate_reply_llm(
             ),
         },
     ]
-    try:
-        return llm_client.chat(
-            model=settings.llm.actor_model,
-            messages=messages,
-            provider=provider,
-        )
-    except Exception:
-        return None
+    return llm_client.chat(
+        model=settings.llm.actor_model,
+        messages=messages,
+        provider=provider,
+        agent_type="actor",
+    )
 
 
 def _reflect(message: str, mood: int) -> str:

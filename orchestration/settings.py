@@ -31,6 +31,19 @@ class AppSettings:
     llm: LLMSettings = field(default_factory=LLMSettings)
     db_path: Path = Path("data/bot.db")
     chroma_db_path: Path = Path("data/chroma_db")
+    rules_path: Path = Path("data/rules/behavior_rules.json")
+    use_langgraph: bool = os.getenv("USE_LANGGRAPH", "false").lower() == "true"
+    dry_run: bool = os.getenv("DRY_RUN", "false").lower() == "true"
 
 
 settings = AppSettings()
+
+
+def enable_dry_run():
+    """DRY RUNモードを有効化（テスト用）"""
+    settings.dry_run = True
+
+
+def disable_dry_run():
+    """DRY RUNモードを無効化"""
+    settings.dry_run = False

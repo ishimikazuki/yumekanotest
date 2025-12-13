@@ -214,13 +214,35 @@ async function sendMessage() {
 
         if (res.ok) {
             const data = await res.json();
-            updateUI(data);
+
+            // 応答をダイアログボックスに表示
+            if (data.reply) {
+                els.dialogueText.textContent = data.reply;
+
+                // チャット履歴にも追加
+                const replyDiv = document.createElement('div');
+                replyDiv.className = 'chat-bubble assistant';
+                replyDiv.textContent = data.reply;
+                els.chatHistory.appendChild(replyDiv);
+                els.chatHistory.scrollTop = els.chatHistory.scrollHeight;
+                renderedHistoryLength++;
+            }
+
+            // 状態を更新（感情チャートのみ、dialogueTextは触らない）
+            if (data.state) {
+                updateEmotionChart(data.state);
+            }
+
+            // チャット後にログを自動更新
+            refreshLogs();
         } else {
             const errorData = await res.json();
             alert("Error: " + (errorData.detail || res.statusText));
+            refreshLogs(); // エラー時もログ更新
         }
     } catch (e) {
         alert("Error: " + e);
+        refreshLogs();
     } finally {
         els.sendBtn.disabled = false;
         els.messageInput.focus();
@@ -238,5 +260,145 @@ async function resetSession() {
     location.reload();
 }
 
+// ===== Agent Logs Functions =====
+
+let currentLogFilter = 'all';
+
+function toggleLogsPanel() {
+    const panel = document.getElementById('logsPanel');
+    panel.classList.toggle('collapsed');
+}
+
+async function refreshLogs(event) {
+    if (event) event.stopPropagation();
+
+    try {
+        const url = currentLogFilter === 'all'
+            ? '/logs?limit=50'
+            : `/logs/${currentLogFilter}?limit=30`;
+
+        const res = await fetch(url);
+        if (res.ok) {
+            const data = await res.json();
+            renderLogs(data.logs);
+        }
+    } catch (e) {
+        console.error("Failed to fetch logs:", e);
+    }
+}
+
+async function clearLogs(event) {
+    if (event) event.stopPropagation();
+
+    try {
+        await fetch('/logs', { method: 'DELETE' });
+        renderLogs([]);
+    } catch (e) {
+        console.error("Failed to clear logs:", e);
+    }
+}
+
+function filterLogs(agent) {
+    currentLogFilter = agent;
+
+    // Update button states
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.agent === agent);
+    });
+
+    refreshLogs();
+}
+
+function renderLogs(logs) {
+    const list = document.getElementById('logsList');
+    if (!logs || logs.length === 0) {
+        list.innerHTML = '<div style="color: var(--text-sub); text-align: center; padding: 20px;">No logs yet</div>';
+        return;
+    }
+
+    list.innerHTML = logs.map(log => {
+        const errorClass = log.action === 'error' ? ' error' : '';
+        const time = log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : '';
+        const duration = log.duration_ms ? `${log.duration_ms}ms` : '';
+
+        let content = '';
+        if (log.action === 'error') {
+            content = log.error || 'Unknown error';
+        } else if (log.output_summary) {
+            content = log.output_summary;
+        } else if (log.input_summary) {
+            content = log.input_summary;
+        }
+
+        return `
+            <div class="log-entry ${log.agent_name}${errorClass}">
+                <span class="log-agent">${log.agent_name}</span>
+                <span class="log-action">${log.action}</span>
+                <span class="log-duration">${duration}</span>
+                <span class="log-content">${escapeHtml(content.substring(0, 150))}${content.length > 150 ? '...' : ''}</span>
+                <span class="log-time">${time}</span>
+            </div>
+        `;
+    }).join('');
+
+    // Scroll to bottom
+    list.scrollTop = list.scrollHeight;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ===== DRY RUN Functions =====
+
+async function toggleDryRun() {
+    const checkbox = document.getElementById('dryrunToggle');
+    const enabled = checkbox.checked;
+
+    try {
+        const res = await fetch('/dryrun', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled })
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            console.log('DRY RUN mode:', data.dry_run ? 'enabled' : 'disabled');
+        }
+    } catch (e) {
+        console.error("Failed to toggle dry run:", e);
+        checkbox.checked = !enabled; // Revert on error
+    }
+}
+
+async function loadDryRunStatus() {
+    try {
+        const res = await fetch('/dryrun');
+        if (res.ok) {
+            const data = await res.json();
+            document.getElementById('dryrunToggle').checked = data.dry_run;
+        }
+    } catch (e) {
+        console.error("Failed to load dry run status:", e);
+    }
+}
+
+// ===== Enhanced Init =====
+
+function initLogs() {
+    // Load initial dry run status
+    loadDryRunStatus();
+
+    // Start expanded (ログパネルを開いた状態で開始)
+    // document.getElementById('logsPanel').classList.add('collapsed');
+
+    // Load initial logs
+    refreshLogs();
+}
+
 // Start
 init();
+initLogs();

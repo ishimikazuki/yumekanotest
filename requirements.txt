@@ -1,3 +1,6 @@
 openai
 python-dotenv
 chromadb
+langgraph>=0.2.0
+pytest
+httpx

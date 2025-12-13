@@ -1,3 +1,19 @@
-# ExecPlans
- 
-When writing complex features or significant refactors, use an ExecPlan (as described in .agent/PLANS.md) from design to implementation.
+# Codex 設定
+
+## 共通ルール
+`PROJECT.md` の方針に従うこと。
+
+## 作業記録
+- 作業後は `WORKLOG.md` に追記する（日付と [Codex] タグをつける）
+- 計画変更は `PLAN.md` に反映する
+
+## Codexの強みを活かす
+- 明確なタスクを効率よく実行する
+- 構造化された出力を心がける
+- 指示された範囲を確実に完了させる
+
+## ExecPlanについて
+複雑な機能やリファクタを行う場合は `../PLAN.md` を参照し、計画を立てる。
+Claude Codeとの連携のため、計画は共通フォーマットで記載する。
+
+詳細な計画フォーマットは `.agent/PLANS.md` を参照。

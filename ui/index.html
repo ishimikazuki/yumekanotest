@@ -92,6 +92,33 @@
 
   </div>
 
+  <!-- Agent Logs Panel (折りたたみ式) -->
+  <div class="logs-panel" id="logsPanel">
+    <div class="logs-header" onclick="toggleLogsPanel()">
+      <span>Agent Logs</span>
+      <div class="logs-controls">
+        <label class="dryrun-toggle">
+          <input type="checkbox" id="dryrunToggle" onchange="toggleDryRun()">
+          <span>DRY RUN</span>
+        </label>
+        <button onclick="refreshLogs(event)" class="logs-btn">Refresh</button>
+        <button onclick="clearLogs(event)" class="logs-btn">Clear</button>
+        <span class="logs-toggle" id="logsToggle">▲</span>
+      </div>
+    </div>
+    <div class="logs-content" id="logsContent">
+      <div class="logs-filter">
+        <button class="filter-btn active" data-agent="all" onclick="filterLogs('all')">All</button>
+        <button class="filter-btn" data-agent="observer" onclick="filterLogs('observer')">Observer</button>
+        <button class="filter-btn" data-agent="actor" onclick="filterLogs('actor')">Actor</button>
+        <button class="filter-btn" data-agent="critic" onclick="filterLogs('critic')">Critic</button>
+      </div>
+      <div class="logs-list" id="logsList">
+        <!-- ログがここに表示される -->
+      </div>
+    </div>
+  </div>
+
   <!-- Logic -->
   <script src="static/app.js"></script>
 </body>
