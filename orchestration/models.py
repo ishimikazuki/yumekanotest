@@ -92,6 +92,25 @@ class UserState:
 
 
 @dataclass
+class UtteranceClassification:
+    """発話分類結果"""
+    category: str  # profile, preference, promise, boundary, chit-chat
+    confidence: float
+    extracted_info: Dict[str, Any] = field(default_factory=dict)
+    reasoning: str = ""
+
+    def to_dict(self) -> Dict:
+        return {
+            "category": self.category,
+            "confidence": self.confidence,
+            "extracted_info": self.extracted_info,
+            "reasoning": self.reasoning
+        }
+
+
+@dataclass
 class ObservationResult:
     updated_state: UserState
     instruction_override: Optional[str] = None
+    classification: Optional[UtteranceClassification] = None
+    secondary_classifications: List[UtteranceClassification] = field(default_factory=list)

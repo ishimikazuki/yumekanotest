@@ -1,6 +1,7 @@
 """Observer: ユーザーメッセージからステートを更新するロジック。
 
 LLM が利用可能なら JSON 生成で更新し、未設定ならルールベースで動作する。
+発話分類も行い、カテゴリに応じた処理を実行する。
 """
 from __future__ import annotations
 
@@ -9,11 +10,12 @@ import re
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
-from .models import EmotionState, ObservationResult, UserState, utc_now
+from .models import EmotionState, ObservationResult, UserState, UtteranceClassification, utc_now
 from .llm_client import llm_client
 from .settings import settings
 from .prompt_loader import load_prompt
 from .agent_logger import agent_logger
+from .utterance_classifier import utterance_classifier, MultiClassificationResult
 
 # シナリオデータのロード
 SCENARIO_PATH = Path(__file__).resolve().parent / "data" / "idol_story.json"
@@ -91,6 +93,26 @@ def _apply_keywords(text: str, emo: EmotionState) -> None:
     if any(k in lowered for k in ACTIVE):
         emo.arousal += 1.0
 
+def _convert_classification(cls_result: MultiClassificationResult) -> tuple:
+    """分類結果をモデル形式に変換"""
+    primary = UtteranceClassification(
+        category=cls_result.primary.category.value,
+        confidence=cls_result.primary.confidence,
+        extracted_info=cls_result.primary.extracted_info,
+        reasoning=cls_result.primary.reasoning
+    )
+    secondary = [
+        UtteranceClassification(
+            category=s.category.value,
+            confidence=s.confidence,
+            extracted_info=s.extracted_info,
+            reasoning=s.reasoning
+        )
+        for s in cls_result.secondary
+    ]
+    return primary, secondary
+
+
 def update_state(user_message: str, state: UserState, history: List[dict]) -> ObservationResult:
     """ステートを更新し、必要に応じて指示を返す。"""
     provider = settings.llm.observer_provider
@@ -104,16 +126,32 @@ def update_state(user_message: str, state: UserState, history: List[dict]) -> Ob
         provider=provider
     )
 
+    # 発話分類を実行
+    classification_result = None
+    primary_cls = None
+    secondary_cls = []
+    try:
+        classification_result = utterance_classifier.classify(
+            utterance=user_message,
+            context=history,
+            use_llm=llm_client.has(provider)
+        )
+        primary_cls, secondary_cls = _convert_classification(classification_result)
+        print(f"[Observer] 発話分類: {primary_cls.category} (confidence: {primary_cls.confidence:.2f})")
+    except Exception as e:
+        print(f"[Observer] 発話分類エラー: {e}")
+
     # Try LLM update if available
     result = None
     if llm_client.has(provider):
         try:
-            result = _update_state_llm(user_message, state, history, provider)
+            result = _update_state_llm(user_message, state, history, provider, classification_result)
             agent_logger.end_agent(
                 agent_name="observer",
                 output_data={
                     "emotion": result.updated_state.emotion.to_dict() if result else None,
-                    "instruction": result.instruction_override if result else None
+                    "instruction": result.instruction_override if result else None,
+                    "classification": primary_cls.to_dict() if primary_cls else None
                 },
                 details={"source": "llm"}
             )
@@ -132,13 +170,24 @@ def update_state(user_message: str, state: UserState, history: List[dict]) -> Ob
         new_state.emotion.decay(0.1)
         new_state.scenario.turn_count_in_phase += 1
         new_state.updated_at = utc_now()
-        result = ObservationResult(updated_state=new_state)
+        result = ObservationResult(
+            updated_state=new_state,
+            classification=primary_cls,
+            secondary_classifications=secondary_cls
+        )
         agent_logger.end_agent(
             agent_name="observer",
-            output_data={"emotion": new_state.emotion.to_dict()},
+            output_data={
+                "emotion": new_state.emotion.to_dict(),
+                "classification": primary_cls.to_dict() if primary_cls else None
+            },
             details={"source": "rules_fallback"}
         )
-    
+    else:
+        # LLM結果に分類を追加
+        result.classification = primary_cls
+        result.secondary_classifications = secondary_cls
+
     # シナリオ遷移チェック (LLM更新後に判定)
     triggered = _check_scenario_trigger(result.updated_state)
     if triggered:
@@ -148,7 +197,13 @@ def update_state(user_message: str, state: UserState, history: List[dict]) -> Ob
     return result
 
 
-def _update_state_llm(user_message: str, state: UserState, history: List[dict], provider: str) -> Optional[ObservationResult]:
+def _update_state_llm(
+    user_message: str,
+    state: UserState,
+    history: List[dict],
+    provider: str,
+    classification: Optional[MultiClassificationResult] = None
+) -> Optional[ObservationResult]:
     """OpenAI を用いた JSON 更新パス。"""
     system_prompt = load_prompt("observer_system", DEFAULT_OBSERVER_SYSTEM_PROMPT)
     
