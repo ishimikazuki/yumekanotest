@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from typing import Optional
 from pathlib import Path
@@ -23,6 +24,8 @@ app: Optional["FastAPI"] = None
 
 if FastAPI:
 
+    ROOT_PATH = os.getenv("ROOT_PATH", "")
+
     class ChatRequest(BaseModel):
         user_id: str
         message: str
@@ -30,7 +33,7 @@ if FastAPI:
     class DryRunRequest(BaseModel):
         enabled: bool
 
-    app = FastAPI(title="Observer-Actor Orchestration Bot")
+    app = FastAPI(title="Observer-Actor Orchestration Bot", root_path=ROOT_PATH)
     app.mount("/static", StaticFiles(directory="ui"), name="static")
 
     # ログ取得エンドポイント

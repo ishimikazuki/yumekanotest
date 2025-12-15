@@ -98,7 +98,8 @@ function setupEvents() {
     els.resetBtn.addEventListener('click', resetSession);
 
     els.messageInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
+        // IME変換中は送信しない
+        if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
             e.preventDefault();
             sendMessage();
         }
@@ -108,12 +109,14 @@ function setupEvents() {
 }
 
 // Logic
+const API_BASE = '/api';
+
 async function fetchState() {
     const uid = els.userId.value.trim();
     if (!uid) return;
 
     try {
-        const res = await fetch(`/state/${encodeURIComponent(uid)}`);
+        const res = await fetch(`${API_BASE}/state/${encodeURIComponent(uid)}`);
         if (res.ok) {
             const data = await res.json();
             updateUI(data);
@@ -206,7 +209,7 @@ async function sendMessage() {
     els.chatHistory.scrollTop = els.chatHistory.scrollHeight;
 
     try {
-        const res = await fetch('/chat', {
+        const res = await fetch(`${API_BASE}/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: uid, message: msg })
@@ -252,7 +255,7 @@ async function sendMessage() {
 async function resetSession() {
     if (!confirm("Reset Session? Memory will be lost.")) return;
     const uid = els.userId.value.trim();
-    await fetch('/reset', {
+    await fetch(`${API_BASE}/reset`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: uid, message: "" })
@@ -274,8 +277,8 @@ async function refreshLogs(event) {
 
     try {
         const url = currentLogFilter === 'all'
-            ? '/logs?limit=50'
-            : `/logs/${currentLogFilter}?limit=30`;
+            ? `${API_BASE}/logs?limit=50`
+            : `${API_BASE}/logs/${currentLogFilter}?limit=30`;
 
         const res = await fetch(url);
         if (res.ok) {
@@ -291,7 +294,7 @@ async function clearLogs(event) {
     if (event) event.stopPropagation();
 
     try {
-        await fetch('/logs', { method: 'DELETE' });
+        await fetch(`${API_BASE}/logs`, { method: 'DELETE' });
         renderLogs([]);
     } catch (e) {
         console.error("Failed to clear logs:", e);
@@ -351,6 +354,30 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// Update emotion chart only (without touching dialogue)
+function updateEmotionChart(state) {
+    if (!state) return;
+
+    const e = state.emotion || { pleasure: 0, arousal: 0, dominance: 0 };
+
+    // Update Chart
+    emotionChart.data.datasets[0].data = [e.pleasure, e.arousal, e.dominance];
+    emotionChart.update();
+
+    // Update Character Image
+    let charKey = 'normal';
+    if (e.pleasure > 5) charKey = 'happy';
+    else if (e.pleasure < 0 && e.dominance > 0) charKey = 'angry';
+    els.characterImg.src = CONFIG.CHAR_IMAGES[charKey] || CONFIG.CHAR_IMAGES['normal'];
+
+    // Update Scene Background
+    const sceneKey = state.scenario?.current_scene;
+    if (sceneKey && CONFIG.SCENE_IMAGES[sceneKey]) {
+        els.sceneBg.style.backgroundImage = CONFIG.SCENE_IMAGES[sceneKey];
+        els.sceneBg.style.opacity = '0.6';
+    }
+}
+
 // ===== DRY RUN Functions =====
 
 async function toggleDryRun() {
@@ -358,7 +385,7 @@ async function toggleDryRun() {
     const enabled = checkbox.checked;
 
     try {
-        const res = await fetch('/dryrun', {
+        const res = await fetch(`${API_BASE}/dryrun`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ enabled })
@@ -376,7 +403,7 @@ async function toggleDryRun() {
 
 async function loadDryRunStatus() {
     try {
-        const res = await fetch('/dryrun');
+        const res = await fetch(`${API_BASE}/dryrun`);
         if (res.ok) {
             const data = await res.json();
             document.getElementById('dryrunToggle').checked = data.dry_run;
