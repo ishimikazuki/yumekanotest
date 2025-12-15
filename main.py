@@ -24,7 +24,8 @@ app: Optional["FastAPI"] = None
 
 if FastAPI:
 
-    ROOT_PATH = os.getenv("ROOT_PATH", "")
+    # Vercel では自動で環境変数 VERCEL=1 が入る。ローカルでは空。
+    ROOT_PATH = "/api" if os.getenv("VERCEL") else os.getenv("ROOT_PATH", "")
 
     class ChatRequest(BaseModel):
         user_id: str
