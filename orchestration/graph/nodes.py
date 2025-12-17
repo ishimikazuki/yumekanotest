@@ -99,16 +99,16 @@ def node_observe(state: GraphState) -> Dict[str, Any]:
 
 
 def node_retrieve_memory(state: GraphState) -> Dict[str, Any]:
-    """Memory: 関連記憶の取得"""
-    from ..memory import memory_system
+    """Memory: 関連記憶の取得（Supabase HierarchicalMemory使用）"""
+    from ..memory.memory_manager import HierarchicalMemory
 
     try:
-        memories = memory_system.retrieve_memory(
-            state["user_id"],
-            state["user_message"],
+        memory = HierarchicalMemory(state["user_id"])
+        retrieved = memory.retrieve(
+            query=state["user_message"],
             n_results=3,
         )
-        memory_texts = [m.text for m in memories]
+        memory_texts = [m.content for m in retrieved]
 
         return {
             "memories": memory_texts,
@@ -252,32 +252,22 @@ def node_fix(state: GraphState) -> Dict[str, Any]:
 
 
 def node_save(state: GraphState) -> Dict[str, Any]:
-    """Save: ログ保存と応答確定"""
+    """Save: ログ保存と応答確定（Supabase HierarchicalMemory使用）"""
     from ..storage import append_log
-    from ..memory import memory_system
+    from ..memory.memory_manager import HierarchicalMemory
 
     final_reply = state["draft_reply"]
 
     try:
-        # ログ保存
+        # ログ保存（SQLite - 後方互換性のため維持）
         append_log(state["user_id"], "user", state["user_message"])
         append_log(state["user_id"], "assistant", final_reply)
 
-        # 長期記憶保存
-        current_phase = state["user_state"].scenario.current_phase if state.get("user_state") else "unknown"
-
-        memory_system.save_memory(
-            state["user_id"],
-            f"User: {state['user_message']}",
-            role="user",
-            phase=current_phase,
-        )
-        memory_system.save_memory(
-            state["user_id"],
-            f"Me(Seira): {final_reply}",
-            role="assistant",
-            phase=current_phase,
-        )
+        # 階層メモリに保存（Supabase）
+        # 短期記憶に追加 → 15ターンで自動的に中期・長期に昇格
+        memory = HierarchicalMemory(state["user_id"])
+        memory.add_message("user", state["user_message"])
+        memory.add_message("assistant", final_reply)
 
     except Exception as e:
         print(f"[node_save] Error: {e}")

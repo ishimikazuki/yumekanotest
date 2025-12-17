@@ -1,11 +1,19 @@
 """ベクトル記憶ストア（ChromaDB）。
 
+.. deprecated::
+    このモジュールは非推奨です。代わりに HierarchicalMemory を使用してください。
+
+    >>> from orchestration.memory.memory_manager import HierarchicalMemory
+    >>> memory = HierarchicalMemory(user_id)
+    >>> memory.retrieve(query, n_results=3)
+
 短期・中期メモリとは別に、ユーザー発話や応答をベクトル化して
 検索できるようにするためのシンプルな永続ストア。
 """
 from __future__ import annotations
 
 import uuid
+import warnings
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List
@@ -24,7 +32,17 @@ class MemoryItem:
 
 
 class MemorySystem:
+    """
+    .. deprecated::
+        MemorySystem は非推奨です。HierarchicalMemory を使用してください。
+    """
     def __init__(self):
+        warnings.warn(
+            "MemorySystem は非推奨です。HierarchicalMemory を使用してください。"
+            " from orchestration.memory.memory_manager import HierarchicalMemory",
+            DeprecationWarning,
+            stacklevel=2
+        )
         # ChromaDB Client の初期化（データは data/chroma に永続化）
         self.client = chromadb.PersistentClient(path=str(settings.chroma_db_path))
         self.collection = self.client.get_or_create_collection(name="idol_memories")
