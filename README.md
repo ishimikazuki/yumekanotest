@@ -16,6 +16,11 @@
 - `OBSERVER_PROVIDER`=`openai` / `ACTOR_PROVIDER`=`xai`（既定）
 ⚠️ 本MVPは LLM 必須です。`OPENAI_API_KEY`（Observer）と `XAI_API_KEY`（Actor）が未設定または無効な場合、エラーを返します（テンプレートにはフォールバックしません）。
 
+### Supabase（記憶保存を本番稼働させる場合）
+- `SUPABASE_URL` と `SUPABASE_ANON_KEY`（または `SUPABASE_SERVICE_KEY`）を `.env` に設定
+- `data/supabase_schema.sql` を Supabase SQL Editor で実行してテーブル・RPCを作成
+- pgvector を使うため、`vector` 拡張を有効にする（上記スクリプトに含まれています）
+
 ### 1) 依存インストール（任意）
 ```
 python -m venv .venv

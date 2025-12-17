@@ -59,9 +59,24 @@ def summarize_conversation(messages: List[Dict], llm_client=None) -> Dict:
 """
 
     try:
+        from ..settings import settings
         result = llm_client.json_chat(
-            messages=[{"role": "user", "content": prompt}],
-            system_prompt="あなたは会話分析の専門家です。会話から重要な情報を抽出します。"
+            model=settings.llm.observer_model,
+            messages=[
+                {"role": "system", "content": "あなたは会話分析の専門家です。会話から重要な情報を抽出します。"},
+                {"role": "user", "content": prompt}
+            ],
+            schema={
+                "type": "object",
+                "properties": {
+                    "summary": {"type": "string"},
+                    "importance": {"type": "number"},
+                    "key_facts": {"type": "array", "items": {"type": "string"}},
+                    "emotional_events": {"type": "array", "items": {"type": "string"}}
+                },
+                "required": ["summary", "importance"]
+            },
+            provider=settings.llm.observer_provider
         )
 
         # 結果の検証とデフォルト値の設定

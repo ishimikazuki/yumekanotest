@@ -8,7 +8,8 @@ from .actor import generate_reply
 from .models import UserState
 from .observer import update_state as observe
 from .storage import fetch_state, init_db, update_state
-from .memory import HierarchicalMemory
+from .memory.memory_manager import HierarchicalMemory
+from .memory import vector_store
 
 
 # 環境変数でLangGraphを有効化（デフォルトはfalse）
@@ -64,6 +65,9 @@ def _process_chat_turn_legacy(user_id: str, user_message: str) -> Dict:
     memory = get_memory(user_id)
     history = memory.get_context()
 
+    # ベクトル記憶にも入力を保存（モックしやすい副作用）
+    vector_store.memory_system.save_memory(user_id, user_message, role="user", phase="interaction")
+
     # 1. Observer: ステート更新 (感情, シナリオ変遷)
     observation = observe(user_message, state, history)
     new_state = observation.updated_state
@@ -118,6 +122,9 @@ def _process_chat_turn_legacy(user_id: str, user_message: str) -> Dict:
 
     if result.get("promoted"):
         print(f"[Memory] 中期記憶に昇格: {result.get('summary', '')[:50]}...")
+
+    # ベクトル記憶にアシスタント返答も保存
+    vector_store.memory_system.save_memory(user_id, final_reply, role="assistant", phase="interaction")
 
     return {"reply": final_reply, "state": new_state}
 

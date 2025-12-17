@@ -332,5 +332,110 @@ class UtteranceClassifier:
         return MultiClassificationResult(primary=primary, secondary=secondary)
 
 
+    def check_consent(
+        self,
+        utterance: str,
+        proposal_context: Optional[str] = None,
+        use_llm: bool = True
+    ) -> tuple[bool, float, str]:
+        """
+        ユーザー発話が提案への同意かどうかを判定する。
+
+        Args:
+            utterance: ユーザー発話
+            proposal_context: アクターからの提案内容（例：「カフェに行きませんか？」）
+            use_llm: LLMを使用するか
+
+        Returns:
+            tuple[bool, float, str]: (同意したか, 確信度, 理由)
+        """
+        if use_llm:
+            try:
+                return self._check_consent_with_llm(utterance, proposal_context)
+            except Exception as e:
+                print(f"[UtteranceClassifier] 同意判定LLMエラー: {e}")
+
+        # フォールバック: ルールベース
+        return self._check_consent_with_rules(utterance)
+
+    def _check_consent_with_llm(
+        self,
+        utterance: str,
+        proposal_context: Optional[str] = None
+    ) -> tuple[bool, float, str]:
+        """LLMを使用した同意判定"""
+        proposal_text = f"\n## 直前の提案\n{proposal_context}" if proposal_context else ""
+
+        prompt = f"""ユーザーの発話が「提案や誘いへの同意・肯定」かどうかを判定してください。
+{proposal_text}
+
+## ユーザー発話
+{utterance}
+
+## 判定基準
+- 同意（consent=true）: 「いいよ」「行こう」「そうしよう」「うん」「わかった」など、提案を受け入れる意思表示
+- 拒否・保留（consent=false）: 「やめとく」「まだ」「ちょっと待って」「違う」など、受け入れない意思表示
+- 曖昧な場合は、文脈から判断し、受け入れに傾いているならtrue、そうでなければfalse
+
+## 出力形式（JSON）
+{{
+    "consent": true/false,
+    "confidence": 0.0-1.0,
+    "reasoning": "判定理由"
+}}
+"""
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "consent": {"type": "boolean"},
+                "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                "reasoning": {"type": "string"}
+            },
+            "required": ["consent", "confidence"]
+        }
+
+        result = self.llm_client.json_chat(
+            messages=[{"role": "user", "content": prompt}],
+            schema=schema,
+            system_prompt="あなたは日本語の会話分析の専門家です。ユーザーが提案に同意しているかを正確に判定してください。"
+        )
+
+        consent = result.get("consent", False)
+        confidence = float(result.get("confidence", 0.5))
+        reasoning = result.get("reasoning", "")
+
+        return (consent, confidence, reasoning)
+
+    def _check_consent_with_rules(self, utterance: str) -> tuple[bool, float, str]:
+        """ルールベースの同意判定（フォールバック）"""
+        CONSENT_POSITIVE = [
+            "いいよ", "行こう", "そうしよう", "うん", "はい", "いいね", "行きたい",
+            "賛成", "OK", "ok", "オッケー", "いいですよ", "そうだね", "いこう",
+            "わかった", "了解", "いいわよ", "そうね", "お願い", "ぜひ", "もちろん",
+            "そうする", "いい", "ええ", "あー、いい", "まあいい"
+        ]
+        CONSENT_NEGATIVE = [
+            "やめ", "いや", "嫌", "無理", "帰る", "帰り", "まだ", "ちょっと待",
+            "待って", "違う", "ダメ", "だめ", "やだ", "遠慮", "結構", "いらない",
+            "パス", "今度", "また今度", "後で"
+        ]
+
+        lowered = utterance.lower()
+
+        # 否定キーワードチェック（優先）
+        for neg in CONSENT_NEGATIVE:
+            if neg in lowered:
+                return (False, 0.7, f"拒否キーワード検出: {neg}")
+
+        # 肯定キーワードチェック
+        for pos in CONSENT_POSITIVE:
+            if pos in lowered:
+                return (True, 0.7, f"同意キーワード検出: {pos}")
+
+        # どちらでもない場合はデフォルトで非同意
+        return (False, 0.4, "明確な同意表現なし")
+
+
 # シングルトンインスタンス
 utterance_classifier = UtteranceClassifier()

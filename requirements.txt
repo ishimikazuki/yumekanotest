@@ -4,3 +4,4 @@ chromadb
 langgraph>=0.2.0
 pytest
 httpx
+supabase>=2.4.0

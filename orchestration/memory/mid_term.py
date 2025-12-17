@@ -66,13 +66,15 @@ class MidTermMemoryManager:
 
         # 中期記憶に保存
         try:
-            result = self._supabase.table("mid_term_memory").insert({
+            insert_data = {
                 "user_id": self.user_id,
                 "summary": summary_result["summary"],
                 "importance": summary_result["importance"],
                 "source_session_id": session_id,
-                "turn_range": f"[{turn_start},{turn_end}]",
-            }).execute()
+                "turn_start": turn_start,
+                "turn_end": turn_end,
+            }
+            result = self._supabase.table("mid_term_memory").insert(insert_data).execute()
 
             mid_term_id = result.data[0]["id"] if result.data else None
 
@@ -163,23 +165,13 @@ class MidTermMemoryManager:
 
     def _to_memory(self, data: Dict) -> MidTermMemory:
         """DBレコードをMidTermMemoryに変換"""
-        # turn_rangeをパース: "[1,15]" -> (1, 15)
-        turn_range = data.get("turn_range", "[0,0]")
-        if isinstance(turn_range, str):
-            # "[1,15]" -> "1,15" -> ["1", "15"]
-            turn_range = turn_range.strip("[]").split(",")
-            turn_start = int(turn_range[0]) if len(turn_range) > 0 else 0
-            turn_end = int(turn_range[1]) if len(turn_range) > 1 else 0
-        else:
-            turn_start, turn_end = 0, 0
-
         return MidTermMemory(
             id=data["id"],
             user_id=data["user_id"],
             summary=data["summary"],
             importance=data.get("importance", 0.5),
             source_session_id=data.get("source_session_id", ""),
-            turn_start=turn_start,
-            turn_end=turn_end,
+            turn_start=data.get("turn_start", 0),
+            turn_end=data.get("turn_end", 0),
             created_at=data.get("created_at", "")
         )

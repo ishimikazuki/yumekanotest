@@ -6,7 +6,7 @@ from orchestration import orchestrator, models
 def mock_subsystems():
     with patch("orchestration.orchestrator.observe") as mock_observe, \
          patch("orchestration.orchestrator.generate_reply") as mock_actor, \
-         patch("orchestration.orchestrator.memory_system") as mock_mem:
+         patch("orchestration.memory.vector_store.memory_system") as mock_mem:
         
         # Setup defaults
         mock_observe.return_value = models.ObservationResult(

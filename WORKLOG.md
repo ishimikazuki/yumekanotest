@@ -95,3 +95,14 @@ Claude Code / Codex 共通の作業履歴。作業後は必ず追記すること
 - WORKLOG.md 作成：作業ログを統一
 - PLAN.md 作成：計画・進捗を統一
 - claude.md / AGENTS.md を「働き方」のみに整理
+
+## 2025-12-14
+### テスト修正・メモリ保存フック追加 [Codex]
+- orchestrator のレガシーフローでベクトル記憶保存を追加し、`memory_system` をモックしやすい形に変更。
+- `orchestration.memory.vector_store` を導入し、インポート経路を整理。
+- `tests/test_orchestrator.py` のパッチ対象に合わせて呼び出しを反映し、pytest が全件パスすることを確認。
+
+### Supabase 本番用セットアップ準備 [Codex]
+- `.env.example` に `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `DRY_RUN` を追加し、本番で記憶保存を有効化するための環境変数を明示。
+- `requirements.txt` に `supabase` を追加。
+- Supabase で必要なテーブル・RPC・拡張をまとめた `data/supabase_schema.sql` を追加（short/mid/long term memory と match_long_term_memory 関数、pgvector インデックス）。
