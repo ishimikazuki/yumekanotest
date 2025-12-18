@@ -44,7 +44,12 @@ def chat(req: ChatRequest):
         # Vercelでは動作しません
         from openai import OpenAI
 
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="OPENAI_API_KEY not set")
+
+        # 明示的にOpenAI公式エンドポイントを使用
+        client = OpenAI(api_key=api_key, base_url="https://api.openai.com/v1")
 
         response = client.chat.completions.create(
             model="gpt-4o-mini",
