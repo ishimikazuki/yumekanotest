@@ -2,13 +2,19 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from pathlib import Path
 from typing import Dict, List, Optional
 
 from .models import UserState, utc_now
 
-DB_PATH = Path("data/bot.db")
+# Vercel環境では/tmpを使用（サーバーレスの一時ストレージ）
+IS_VERCEL = os.getenv("VERCEL") == "1"
+if IS_VERCEL:
+    DB_PATH = Path("/tmp/data/bot.db")
+else:
+    DB_PATH = Path("data/bot.db")
 
 
 def _connect() -> sqlite3.Connection:

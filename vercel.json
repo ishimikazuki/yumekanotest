@@ -5,7 +5,11 @@
       "src": "api/index.py",
       "use": "@vercel/python",
       "config": {
-        "includeFiles": ["orchestration/prompts/**/*.txt"]
+        "includeFiles": [
+          "orchestration/**/*.py",
+          "orchestration/**/*.txt",
+          "data/**/*.json"
+        ]
       }
     },
     { "src": "ui/**/*", "use": "@vercel/static" }

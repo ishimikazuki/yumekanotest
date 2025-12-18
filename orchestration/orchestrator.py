@@ -9,8 +9,15 @@ from .models import UserState
 from .observer import update_state as observe
 from .storage import fetch_state, init_db, update_state
 from .memory.memory_manager import HierarchicalMemory
-from .memory import vector_store
 
+# ChromaDBはVercel環境では使用しない
+IS_VERCEL = os.getenv("VERCEL") == "1"
+vector_store = None
+if not IS_VERCEL:
+    try:
+        from .memory import vector_store
+    except Exception:
+        pass
 
 # 環境変数でLangGraphを有効化（デフォルトはfalse）
 USE_LANGGRAPH = os.getenv("USE_LANGGRAPH", "false").lower() == "true"
@@ -66,7 +73,8 @@ def _process_chat_turn_legacy(user_id: str, user_message: str) -> Dict:
     history = memory.get_context()
 
     # ベクトル記憶にも入力を保存（モックしやすい副作用）
-    vector_store.memory_system.save_memory(user_id, user_message, role="user", phase="interaction")
+    if vector_store and hasattr(vector_store, 'memory_system') and vector_store.memory_system:
+        vector_store.memory_system.save_memory(user_id, user_message, role="user", phase="interaction")
 
     # 1. Observer: ステート更新 (感情, シナリオ変遷)
     observation = observe(user_message, state, history)
@@ -124,7 +132,8 @@ def _process_chat_turn_legacy(user_id: str, user_message: str) -> Dict:
         print(f"[Memory] 中期記憶に昇格: {result.get('summary', '')[:50]}...")
 
     # ベクトル記憶にアシスタント返答も保存
-    vector_store.memory_system.save_memory(user_id, final_reply, role="assistant", phase="interaction")
+    if vector_store and hasattr(vector_store, 'memory_system') and vector_store.memory_system:
+        vector_store.memory_system.save_memory(user_id, final_reply, role="assistant", phase="interaction")
 
     return {"reply": final_reply, "state": new_state}
 
