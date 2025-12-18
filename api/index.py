@@ -1,11 +1,27 @@
 """Vercel Python Function entrypoint - lightweight version."""
 
 import os
+from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 app = FastAPI(title="Observer-Actor Orchestration Bot", root_path="/api")
+
+# プロンプトファイルの読み込み
+def load_system_prompt() -> str:
+    """actor_system.txtからシステムプロンプトを読み込む"""
+    # api/index.py の親ディレクトリ（プロジェクトルート）から相対パス
+    base_dir = Path(__file__).parent.parent
+    prompt_path = base_dir / "orchestration" / "prompts" / "actor_system.txt"
+
+    if prompt_path.exists():
+        return prompt_path.read_text(encoding="utf-8")
+
+    # フォールバック: 簡易プロンプト
+    return "あなたはアイドルの「ゆめか」です。明るく元気な性格で、プロデューサーさんと話しています。"
+
+SYSTEM_PROMPT = load_system_prompt()
 
 
 class ChatRequest(BaseModel):
@@ -54,7 +70,7 @@ def chat(req: ChatRequest):
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "あなたはアイドルの「ゆめか」です。明るく元気な性格で、プロデューサーさんと話しています。"},
+                {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": req.message}
             ]
         )
