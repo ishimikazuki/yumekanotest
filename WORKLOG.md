@@ -106,3 +106,24 @@ Claude Code / Codex 共通の作業履歴。作業後は必ず追記すること
 - `.env.example` に `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `DRY_RUN` を追加し、本番で記憶保存を有効化するための環境変数を明示。
 - `requirements.txt` に `supabase` を追加。
 - Supabase で必要なテーブル・RPC・拡張をまとめた `data/supabase_schema.sql` を追加（short/mid/long term memory と match_long_term_memory 関数、pgvector インデックス）。
+
+## 2025-12-18
+### Vercelデプロイ設定 [Claude]
+- vercel.json の修正（静的ファイルパターン `ui/**/*`）
+- 環境変数シークレット参照を削除（ダッシュボードで設定する方式に変更）
+- Vercel CLIでのデプロイ確認
+
+### GitHub App連携修正 [Claude]
+- GitHub Appの権限設定を修正（リポジトリアクセス権限の追加）
+- 自動デプロイがトリガーされるように設定
+
+### Vercel軽量API版作成 [Claude]
+- Vercelの250MBサイズ制限に対応
+- chromadb/langgraphを除外した軽量版 `api/index.py` を作成
+- `api/requirements.txt` を追加（openai, python-dotenv, httpx, supabase, fastapi, pydantic）
+- OpenAI直接呼び出しによる簡易チャット機能
+
+### 動作確認 [Claude]
+- UI: https://yumekanotest-ten.vercel.app/ ✅
+- API: https://yumekanotest-ten.vercel.app/api/dryrun ✅
+- 自動デプロイ: GitHubプッシュでトリガー確認 ✅
