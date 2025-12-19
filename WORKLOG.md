@@ -97,6 +97,28 @@ Claude Code / Codex 共通の作業履歴。作業後は必ず追記すること
 - claude.md / AGENTS.md を「働き方」のみに整理
 
 ## 2025-12-14
+### 構造化メモリ実装 [Claude] (#002)
+- UserProfile: 名前、年齢、職業、趣味などを構造化管理
+- Promise: 約束の保存・取得・ステータス更新
+- Boundary: NG/境界線の保存・違反チェック
+- 発話分類との連携: ClassificationResultから自動保存
+- TDD: 19テスト作成・全通過
+
+### 応答生成の注入順序改善 [Claude] (#003)
+- build_actor_prompt_v2() を追加
+- 注入順序: Persona → UserProfile → 約束/NG → エピソード → 短期 → 発話
+- Boundary警告: 高重要度NGには⚠️マークと警告文を追加
+- 後方互換性: 既存のbuild_actor_prompt()は維持
+- TDD: 12テスト作成・全通過
+
+### 定期圧縮機能 [Claude] (#004)
+- MemoryCompressorクラスを実装
+  - create_weekly_summary(): 週次要約の生成
+  - decay_memories(): 古い記憶のスコア減衰
+  - archive_low_importance(): 低重要度記憶のアーカイブ
+  - run_maintenance(): 一括メンテナンス実行
+- TDD: 13テスト作成・全通過
+
 ### テスト修正・メモリ保存フック追加 [Codex]
 - orchestrator のレガシーフローでベクトル記憶保存を追加し、`memory_system` をモックしやすい形に変更。
 - `orchestration.memory.vector_store` を導入し、インポート経路を整理。
@@ -106,6 +128,19 @@ Claude Code / Codex 共通の作業履歴。作業後は必ず追記すること
 - `.env.example` に `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `DRY_RUN` を追加し、本番で記憶保存を有効化するための環境変数を明示。
 - `requirements.txt` に `supabase` を追加。
 - Supabase で必要なテーブル・RPC・拡張をまとめた `data/supabase_schema.sql` を追加（short/mid/long term memory と match_long_term_memory 関数、pgvector インデックス）。
+
+## 2025-12-15
+### Vercel初期設定 [Claude]
+- `api/index.py` 作成: Vercel Python Functionエントリポイント
+- `vercel.json` 作成: ビルド設定、ルーティング、環境変数
+- APIルーティング修正（/api パス対応）
+- root_path設定とルーティング簡素化
+
+## 2025-12-17
+### Vercelデプロイ準備 [Claude]
+- コードベース整理とコミット
+- vercel.json静的ファイルパターン修正（`ui/**/*`）
+- 自動デプロイトリガーテスト
 
 ## 2025-12-18
 ### Vercelデプロイ設定 [Claude]
@@ -123,12 +158,28 @@ Claude Code / Codex 共通の作業履歴。作業後は必ず追記すること
 - `api/requirements.txt` を追加（openai, python-dotenv, httpx, supabase, fastapi, pydantic）
 - OpenAI直接呼び出しによる簡易チャット機能
 
+### Vercel API修正（フル版統合）
+- OpenAI接続修正: 明示的なbase_url設定とAPIキーチェック
+- actor_system.txtプロンプト読み込み対応
+- emotion keys修正（P/A/D → pleasure/arousal/dominance）
+- logs/session管理のエラーハンドリング改善
+- orchestrationモジュール完全統合版を作成
+  - Observer-Actor-Criticループ対応
+  - ChromaDB条件付きインポート（Vercel環境スキップ）
+  - /tmp をSQLiteパスとして使用（Vercelサーバーレス対応）
+
 ### 動作確認 [Claude]
 - UI: https://yumekanotest-ten.vercel.app/ ✅
 - API: https://yumekanotest-ten.vercel.app/api/dryrun ✅
 - 自動デプロイ: GitHubプッシュでトリガー確認 ✅
 
+## 2025-12-19
 ### CLAUDE.md改善 [Claude]
 - 「必須アクション」セクションを追加（作業開始時・完了時のチェックリスト）
 - TodoWriteに「WORKLOG.md更新」を必ず含めるルールを明記
 - 作業完了時にCLAUDE.mdを再確認するよう注意書き追加
+
+### WORKLOG.md補完 [Claude]
+- 2025-12-14〜12-18の未記載作業をgit履歴から復元
+- 構造化メモリ(#002)、注入順序改善(#003)、定期圧縮(#004)を追記
+- Vercel初期設定〜フル版統合までの全作業を追記
