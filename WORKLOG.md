@@ -127,3 +127,8 @@ Claude Code / Codex 共通の作業履歴。作業後は必ず追記すること
 - UI: https://yumekanotest-ten.vercel.app/ ✅
 - API: https://yumekanotest-ten.vercel.app/api/dryrun ✅
 - 自動デプロイ: GitHubプッシュでトリガー確認 ✅
+
+### CLAUDE.md改善 [Claude]
+- 「必須アクション」セクションを追加（作業開始時・完了時のチェックリスト）
+- TodoWriteに「WORKLOG.md更新」を必ず含めるルールを明記
+- 作業完了時にCLAUDE.mdを再確認するよう注意書き追加
