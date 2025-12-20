@@ -183,3 +183,36 @@ Claude Code / Codex 共通の作業履歴。作業後は必ず追記すること
 - 2025-12-14〜12-18の未記載作業をgit履歴から復元
 - 構造化メモリ(#002)、注入順序改善(#003)、定期圧縮(#004)を追記
 - Vercel初期設定〜フル版統合までの全作業を追記
+
+## 2025-12-21
+### Vercel完全版デプロイ修正 [Claude]
+#### 問題
+- Vercel API（api/index.py）がローカル（main.py）と全く別の簡易実装だった
+- ローカルで追加した機能（Observer-Actor-Criticループ、階層メモリ、エージェントログ等）がVercelに反映されていなかった
+
+#### 原因分析
+- 最初にVercel用の簡易版を作成後、ローカルでの機能追加がapi/index.pyに反映されなかった
+- 「Vercelでは重い依存関係が動かない」という想定で別実装を維持していた
+
+#### 修正内容
+1. **api/index.py 全面書き換え**
+   - main.pyと同じorchestrationモジュールを使用するように変更
+   - Observer-Actor-Criticループを完全統合
+
+2. **Vercel環境対応**
+   - ChromaDB: 条件付きインポート（VERCEL環境ではスキップ）
+   - SQLite: /tmpを使用（サーバーレス一時ストレージ）
+   - vercel.json: orchestration/**/*.pyをincludeFilesに追加
+
+3. **Supabaseメモリ統合**
+   - /state/{user_id}エンドポイントをHierarchicalMemoryから取得に変更
+   - session_manager（インメモリ）→ Supabase短期記憶テーブルに切り替え
+   - 会話履歴がサーバーレスインスタンス間で永続化
+
+#### 動作確認済み機能
+- Observer-Actor-Criticループ ✅
+- 感情更新 (pleasure/arousal/dominance) ✅
+- シナリオ遷移 ✅
+- エージェントログ (observer/actor/critic) ✅
+- Supabaseへの履歴保存・取得 ✅
+- ユーザー名等の変数保存 ✅
