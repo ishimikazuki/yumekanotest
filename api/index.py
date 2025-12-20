@@ -94,11 +94,13 @@ def get_state(user_id: str):
     """状態取得"""
     try:
         from orchestration.storage import fetch_state
-        from orchestration.session import session_manager
+        from orchestration.orchestrator import get_memory
 
         state = fetch_state(user_id)
-        session = session_manager.get_session(user_id)
-        history = session.get_history(limit=20)
+
+        # Supabaseから履歴を取得（HierarchicalMemoryを使用）
+        memory = get_memory(user_id)
+        history = memory.get_context(limit=20)
 
         return {
             "state": state.to_dict() if state else None,
